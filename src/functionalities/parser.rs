@@ -1,4 +1,7 @@
 use clap::{Args, Parser, Subcommand};
+use crate::functionalities::client::ClientHandler;
+use crate::functionalities::server::ServerHandler;
+// use std::thread;
 // use crate::audio_utils::DeviceManager;
 
 
@@ -23,30 +26,31 @@ enum Commands {
 }
 
 #[derive(Args)]
-struct SmartHandler {
-    address: Option<String>,
+pub struct SmartHandler {
+    pub address: Option<String>,
 
     /// Optional port incase the user wants to change it
-    #[arg(short, long)]
-    port: Option<String>,
+    #[arg(short, long, default_value = "55452")]
+    pub port: Option<String>,
 
     /// Optional device id incase the user wants to change it
-    #[arg(short, long)]
-    device_id: Option<String>,
+    #[arg(short, long, default_value = "0")]
+    pub device_id: Option<String>,
+
+    #[arg(long, action = clap::ArgAction::SetTrue)]
+    pub device_select: bool,
 }
 
 pub fn parse_args() -> ParsedArgs {
     let cli = ParsedArgs::parse();
+    
 
     match &cli.command {
         Commands::Client(args) => {
-            println!("running Client mode\n");
-            println!("params: \n\t address: {:?}\n\t port: {:?}\n\t deviceID: {:?}", args.address, args.port, args.device_id);
-
+            ClientHandler::new(args);
         }
         Commands::Server(args) => {
-            println!("running Server mode\n");
-            println!("params: \n\t address: {:?}\n\t port: {:?}\n\t deviceID: {:?}", args.address, args.port, args.device_id);
+            ServerHandler::new(args);
         }
     }
 

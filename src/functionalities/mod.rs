@@ -1,2 +1,4 @@
 pub mod parser;
-pub mod audio_utils;
+pub mod server;
+pub mod client;
+pub mod device_handler;
