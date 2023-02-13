@@ -4,17 +4,17 @@ this _Simple Audio Receiver Transmiter_ project was based on my previous python 
 hopefully by using rust, the amount of delay i get wont be as much as using python
 
 ### project graph
-![./img/SmART-R_Graph.png](SmART-R graph)
+![SmART-R graph](img/SmART-R_Graph.png)
 
 # Todo:
 - [x] Smartr
 - [x] Parser
     - [x] Client option
-        - [] Connect to socket
-        - [] Record audio
-        - [] Transmit audio
+        - [ ] Connect to socket
+        - [ ] Record audio
+        - [ ] Transmit audio
     - [x] Server option
-        - [] Open a socket
-        - [] Receive audio
-        - [] playback audio
+        - [ ] Open a socket
+        - [ ] Receive audio
+        - [ ] playback audio
 - [x] Select Device
