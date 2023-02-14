@@ -1,15 +1,22 @@
 use cpal::traits::DeviceTrait;
+use std::net::UdpSocket;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::thread;
+use std::io;
+use std::time;
 
 use crate::functionalities::device_handler::DeviceManager;
 use crate::functionalities::parser::SmartHandler;
 
 pub struct ClientHandler{
+    keep_running: bool,
     address: String,
     port: String,
     device_manager: DeviceManager,
 }
 impl ClientHandler {
-    pub fn new(args: &SmartHandler) {
+    pub fn new(args: &SmartHandler) -> Self {
         if args.address == None {
             panic!("Error address is not set");
         }
@@ -23,6 +30,7 @@ impl ClientHandler {
         }
 
         let client_handler = ClientHandler{
+            keep_running: true,
             port: port,
             address: address,
             device_manager: device_manager,
@@ -30,20 +38,57 @@ impl ClientHandler {
 
         let device = client_handler.device_manager.get_device().clone();
 
-        println!("client is running");
-        println!("params:");
+        println!("client configs:");
         println!("\t address: {:?}", client_handler.address);
         println!("\t port: {:?}", client_handler.port);
         println!("\t deviceID: {:?}", client_handler.device_manager.device_id);
         println!("\t deviceName: {:?}", device.name().unwrap());
 
+        return client_handler;
     }
 
-    // pub fn run(mut self) -> (){
-    //     println!("running Server mode\n");
-    // }
+    pub fn run(mut self) -> (){
+        self.keep_running = true;
+        let port = self.port.clone();
+        let address = self.address.clone() + ":" + &port;
+        
+        println!("sending to address: {}...", address);
 
-    // pub fn stop(mut self) -> (){
-    //     println!("stopping Server mode\n");
-    // }
+        let keep_running = Arc::new(Mutex::new(true));
+        let keep_running_clone = Arc::clone(&keep_running);
+
+        let socket = UdpSocket::bind("127.0.0.1:5545").expect("couldn't bind to address");
+
+        let handle = thread::spawn(move || {
+            socket.connect(address.clone()).expect("connect function failed");
+            loop {
+                let keep_running = *keep_running_clone.lock().unwrap();
+                let buf = &b"hello server"[..];
+
+                if keep_running {
+                    match socket.send_to(buf, address.clone()) {
+                        Ok(_) => println!("sent data: {:?} to {:?}", &buf[..], address),
+                        Err(_e) => println!("something went wrong when sending data"),
+                    }
+                }else{
+                    break;
+                }
+                thread::sleep(time::Duration::from_secs(3));
+            }
+        });
+
+        println!("press enter to stop client!");
+        io::stdin().read_line(&mut String::new()).unwrap();
+        self.stop(handle, keep_running);
+    }
+
+    pub fn stop(&self, thread: thread::JoinHandle<()>, keep_running:Arc<Mutex<bool>>) -> (){
+        println!("stoping client...");
+        thread::spawn(move || {
+            let mut keep_running = keep_running.lock().unwrap();
+            *keep_running = false;
+        }).join().unwrap();
+        thread.join().unwrap();
+        println!("client stopped...");
+    }
 }

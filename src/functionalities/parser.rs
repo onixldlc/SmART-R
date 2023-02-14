@@ -1,7 +1,6 @@
 use clap::{Args, Parser, Subcommand};
 use crate::functionalities::client::ClientHandler;
 use crate::functionalities::server::ServerHandler;
-// use std::thread;
 // use crate::audio_utils::DeviceManager;
 
 
@@ -47,10 +46,12 @@ pub fn parse_args() -> ParsedArgs {
 
     match &cli.command {
         Commands::Client(args) => {
-            ClientHandler::new(args);
+            let client_handler =  ClientHandler::new(args);
+            client_handler.run();
         }
         Commands::Server(args) => {
-            ServerHandler::new(args);
+            let server_handler = ServerHandler::new(args);
+            server_handler.run();
         }
     }
 

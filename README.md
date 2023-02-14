@@ -10,11 +10,11 @@ hopefully by using rust, the amount of delay i get wont be as much as using pyth
 - [x] Smartr
 - [x] Parser
     - [x] Client option
-        - [ ] Connect to socket
+        - [x] Send to socket
         - [ ] Record audio
         - [ ] Transmit audio
     - [x] Server option
-        - [ ] Open a socket
+        - [x] Open a socket
         - [ ] Receive audio
         - [ ] playback audio
 - [x] Select Device
