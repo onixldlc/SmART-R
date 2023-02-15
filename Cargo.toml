@@ -5,6 +5,7 @@ edition = "2021"
 authors = ["mitm"]
 
 [dependencies]
+bincode = "1.3.3"
 clap = { version = "4.1.4", features = ["derive"] }
 cpal = "0.15.0"
 

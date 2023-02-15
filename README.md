@@ -11,10 +11,10 @@ hopefully by using rust, the amount of delay i get wont be as much as using pyth
 - [x] Parser
     - [x] Client option
         - [x] Send to socket
-        - [ ] Record audio
-        - [ ] Transmit audio
+        - [x] Record audio
+        - [x] Transmit audio
     - [x] Server option
         - [x] Open a socket
-        - [ ] Receive audio
+        - [x] Receive audio
         - [ ] playback audio
 - [x] Select Device

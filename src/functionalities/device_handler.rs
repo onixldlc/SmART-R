@@ -1,25 +1,23 @@
 
 use cpal::{traits::{DeviceTrait, HostTrait}};
-use std::io;
+use std::{sync::{Mutex, Arc}, io};
 
+#[derive(Clone)]
 pub struct DeviceManager{
-    pub host: cpal::Host,
-    // pub device: cpal::Device,
+    pub host: Arc<Mutex<cpal::Host>>,
     pub device_type: String,
-    pub device_list: Vec<cpal::Device>,
+    pub device_list: Vec<Arc<Mutex<cpal::Device>>>,
     pub device_id: usize,
 }
 impl DeviceManager {
     pub fn new_output(id: usize) -> DeviceManager {
-        let host = cpal::default_host();
-        // let device = host.default_output_device().expect("no output device available");
+        let host = Arc::new(Mutex::new(cpal::default_host()));
         let device_type = String::from("output");
-        let device_list:Vec<cpal::Device> = Vec::new();
+        let device_list:Vec<Arc<Mutex<cpal::Device>>> = Vec::new();
         let device_id: usize = id;
         
         let mut DeviceMngr = DeviceManager{
             host: host,
-            // device: device,
             device_type: device_type,
             device_list: device_list,
             device_id: device_id,
@@ -29,14 +27,12 @@ impl DeviceManager {
     }
 
     pub fn new_input(id: usize) -> DeviceManager {
-        let host = cpal::default_host();
-        // let device = host.default_input_device().expect("no input device available");
+        let host = Arc::new(Mutex::new(cpal::default_host()));
         let device_type = String::from("input");
-        let device_list:Vec<cpal::Device> = Vec::new();
+        let device_list:Vec<Arc<Mutex<cpal::Device>>> = Vec::new();
         let device_id: usize = id;
         let mut DeviceMngr = DeviceManager{
             host: host,
-            // device: device,
             device_type: device_type,
             device_list: device_list,
             device_id: device_id,
@@ -44,31 +40,36 @@ impl DeviceManager {
         DeviceMngr.list_devices();
         DeviceMngr
     }
-    
+
+
+
+
+
     pub fn list_devices(&mut self) -> () {
-        // let mut temp_devices:Vec<cpal::Device>;
-        let default_device: cpal::Device;
+        let mut temp_devices:Vec<Arc<Mutex<cpal::Device>>> = Vec::new();
+        let default_device: Arc<Mutex<cpal::Device>>;
+        let local_host = &*self.host.lock().unwrap();
 
         if &self.device_type == "output" {
-            default_device = self.host.default_output_device().expect("no output device available");
+            default_device = Arc::new(Mutex::new(local_host.default_output_device().expect("no output device available")));
         }else{
-            default_device = self.host.default_input_device().expect("no input device available");
+            default_device = Arc::new(Mutex::new(local_host.default_input_device().expect("no input device available")));
         }
-        let default_device_name = default_device.name().unwrap();
-        
-        self.device_list.push(default_device);
-        // temp_devices.push(default_device);
-        for device in self.host.devices().unwrap() {
+        let default_device_name = default_device.lock().unwrap().name().unwrap();
+
+        temp_devices.push(default_device);
+        for device in local_host.devices().unwrap() {
             if device.name().unwrap() != default_device_name {
-                self.device_list.push(device);
+                temp_devices.push(Arc::new(Mutex::new(device)));
             }
         }
-        if self.device_list.len() <= self.device_id {
+        if temp_devices.len() <= self.device_id {
             println!("No devices found at id: {:?}, returning to default", self.device_id);
             self.device_id = 0;
         }
+        self.device_list = temp_devices;
     }
-
+    
     pub fn change_device(&mut self) -> () {
         let mut i = 0;
 
@@ -79,8 +80,9 @@ impl DeviceManager {
         println!("Device list: ");
         print!("*");
         for device in &self.device_list {
-            let channel_input = self.get_channel_in(device);
-            let channel_output = self.get_channel_out(device);
+            let device = &*device.lock().unwrap();
+            let channel_input = self.get_channel_in();
+            let channel_output = self.get_channel_out();
             
             print!("{:?}. ", i);
             print!("[in: {:?}] ", channel_input);
@@ -108,7 +110,17 @@ impl DeviceManager {
         return device_id as usize
     }
 
-    fn get_channel_in(&self, device:&cpal::Device) -> u16 {
+    pub fn get_channel(&self) -> cpal::ChannelCount{
+        if self.device_type == "output" {
+            return self.get_channel_out();
+        }else{
+            return self.get_channel_in();
+        }
+    }
+
+    pub fn get_channel_in(&self) -> u16 {
+        let device = self.get_device();
+        let device = &*device.lock().unwrap();
         let channel_input = device.default_input_config();
         match channel_input {
             Ok(channel_input) => {
@@ -120,7 +132,9 @@ impl DeviceManager {
         }
     }
     
-    fn get_channel_out(&self, device:&cpal::Device) -> u16 {
+    pub fn get_channel_out(&self) -> u16 {
+        let device = self.get_device();
+        let device = &*device.lock().unwrap();
         let channel_output = device.default_output_config();
         match channel_output {
             Ok(channel_output) => {
@@ -131,10 +145,46 @@ impl DeviceManager {
             }
         }
     }
+
+    pub fn get_samplerate(&self) -> cpal::SampleRate{
+        if self.device_type == "output" {
+            return cpal::SampleRate(self.get_samplerate_out());
+        }else{
+            return cpal::SampleRate(self.get_samplerate_in());
+        }
+    }
+
+    pub fn get_samplerate_in(&self) -> u32 {
+        let device = self.get_device();
+        let device = &*device.lock().unwrap();
+        let sample_rate = device.default_input_config();
+        match sample_rate {
+            Ok(sample_rate) => {
+                return sample_rate.sample_rate().clone().0;
+            },
+            Err(_) => {
+                return 0;
+            }
+        }
+    }
+
+    pub fn get_samplerate_out(&self) -> u32 {
+        let device = self.get_device();
+        let device = &*device.lock().unwrap();
+        let sample_rate = device.default_output_config();
+        match sample_rate {
+            Ok(sample_rate) => {
+                return sample_rate.sample_rate().clone().0;
+            },
+            Err(_) => {
+                return 0;
+            }
+        }
+    }
     
     
-    pub fn get_device(&self) -> &cpal::Device {
-        return &self.device_list[self.device_id];
+    pub fn get_device(&self) -> Arc<Mutex<cpal::Device>> {
+        return self.device_list[self.device_id].clone();
     }
 
 
