@@ -1,10 +1,7 @@
 use std::net::{SocketAddr, UdpSocket};
-use std::ptr::slice_from_raw_parts;
-use std::slice;
 
 use anyhow::Result;
-use bincode::serialize;
-use cpal::traits::{DeviceTrait, StreamTrait};
+use cpal::traits::DeviceTrait;
 use cpal::{Data, Device, Stream, StreamConfig};
 use log::{debug, error, info};
 

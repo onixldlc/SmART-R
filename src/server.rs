@@ -1,8 +1,7 @@
 use crate::device_selector::{select_device, select_device_by_id, DeviceType};
 use core::slice;
-use std::mem;
 
-use cpal::traits::{DeviceTrait, StreamTrait};
+use cpal::traits::DeviceTrait;
 use cpal::{Data, Device, Stream, StreamConfig};
 
 use std::net::{SocketAddr, UdpSocket};
@@ -71,7 +70,7 @@ impl ServerHandler {
                         .flat_map(|x| vec![*x, *x])
                         .collect::<Vec<f32>>();
                     // prevent buf being dropped as it's backing f32_vec (hopefully)
-                    &buf;
+                    let _ = &buf;
                     duped.swap_with_slice(data.as_slice_mut().unwrap())
                 },
                 |err| {
