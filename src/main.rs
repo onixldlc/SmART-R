@@ -1,52 +1,31 @@
-#![allow(non_snake_case)]
-// use rodio::{Device, Sink};
-// use tokio::net::{TcpListener, TcpStream};
-// use tokio::prelude::*;
-// use std::env;
+extern crate core;
 
-mod functionalities;
-// use functionalities::parser::{parse_args};
+use crate::cli::{Commands, ParsedArgs};
+use crate::client::ClientHandler;
+use crate::server::ServerHandler;
+use anyhow::Result;
+use clap::Parser;
+use cpal::traits::StreamTrait;
+use env_logger::Env;
+use log::debug;
+use std::thread::sleep;
+use std::time::Duration;
 
-fn main() {
-    // let args: Vec<_> = env::args().collect();
+mod cli;
+mod client;
+mod device_selector;
+mod server;
 
-    // for arg in args.clone() {
-    //     println!("{} ,", arg);
-    // }
-    // println!("\n\n");
+fn main() -> Result<()> {
+    env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
+    let cli = ParsedArgs::parse();
 
-    let _ = functionalities::parser::parse_args();
-    
-
-
-
-
-
-    /*
-    // Bind the server to the localhost:8000
-    let listener = TcpListener::bind("127.0.0.1:8000").unwrap();
-
-    // Get the default input device
-    let input_device = rodio::default_input_device().unwrap();
-
-    // Start listening for incoming connections
-    let server = listener
-        .incoming()
-        .for_each(move |stream| {
-            let input_device = input_device.clone();
-            let (sink, stream) = stream.split();
-            tokio::spawn(
-                Sink::new(&input_device)
-                    .stream_into(sink)
-                    .map(|_| ())
-                    .map_err(|_| ()),
-            );
-            Ok(())
-        })
-        .map_err(|err| {
-            eprintln!("accept error: {}", err);
-        });
-    */
-
-    // tokio::run(server);
+    let stream = match cli.command {
+        Commands::Client(args) => ClientHandler::new(args)?.create_stream()?,
+        Commands::Server(args) => ServerHandler::new(args)?.create_stream()?,
+    };
+    stream.play()?;
+    debug!("Playing audio");
+    sleep(Duration::from_secs(999999999999));
+    Ok(())
 }
