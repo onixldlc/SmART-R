@@ -7,6 +7,7 @@ use std::time::Duration;
 use bincode::{deserialize};
 
 
+use crate::functionalities::audio_handler::AudioHandler;
 use crate::functionalities::device_handler::DeviceManager;
 use crate::functionalities::parser::SmartHandler;
 
@@ -26,7 +27,7 @@ impl ServerHandler {
         let address = "0.0.0.0:".to_string() + &port;
         let mut device_manager = DeviceManager::new_output(device_id);
 
-        if args.device_select {
+        if args.select_device {
             device_manager.change_device();
         }
 
@@ -65,6 +66,7 @@ impl ServerHandler {
 
 
         let socket = self.socket.try_clone().unwrap();
+        let device_mgr = self.device_manager.clone();
 
         
         let handle = thread::spawn(move || {
@@ -76,7 +78,8 @@ impl ServerHandler {
             println!("{:?}", timing);
 
             // socket.set_read_timeout(Some(Duration::from_millis(500))).unwrap();
-            let mut buf = [0; 1024];
+            let mut buf = [0 as u8; 1024];
+            let mut audio_buffer = [0 as i16; 1024];
 
             // loop {
             //     let keep_running = *keep_running_clone.lock().unwrap();
@@ -85,27 +88,26 @@ impl ServerHandler {
             //         err => println!("no connection yet"),
             //     }
             // }
+            let audio_handler = AudioHandler::new(device_mgr);
 
-            let mut is_busy = false;
+            audio_handler.playback( move |buffer: &mut cpal::Data| {
+                let _temp = buffer;
+                // buffer.copy_from_slice(&audio_buffer.clone());
+            });
+
             loop {
                 let keep_running = *keep_running_clone.lock().unwrap();
-                println!("is_busy: {:?}, keep_running: {:?}", is_busy, keep_running);
                 match socket.recv_from(&mut buf) {
-                    Ok((_, src)) => {
-                        if !is_busy {
-                            socket.set_read_timeout(Some(Duration::from_millis(500))).unwrap();
-                            is_busy = true;
-                        }
+                    Ok((_, _src)) => {
                         let data: Vec<i16> = deserialize(&buf).unwrap();
-                        println!("received data from {}: {:?}", src, &data[..]);
+                        audio_buffer.copy_from_slice(&data.clone());
+                        // let arr_data: [i16; 1024] = data.into_iter().collect::<Vec<i16>>().try_into().unwrap();
+
+                        // println!("received data from {}: {:?}", src, &data[..]);
                     }
                     Err(_e) => {
                         if keep_running {
                             println!("no data yet!");
-                            if is_busy {
-                                socket.set_read_timeout(Some(Duration::from_secs(5))).unwrap();
-                                is_busy = false;
-                            }
                             // println!("could not receive a datagram: {} {:?}", e, keep_running);
                         }
                         

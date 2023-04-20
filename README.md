@@ -16,5 +16,5 @@ hopefully by using rust, the amount of delay i get wont be as much as using pyth
     - [x] Server option
         - [x] Open a socket
         - [x] Receive audio
-        - [ ] playback audio
+        - [x] playback audio
 - [x] Select Device

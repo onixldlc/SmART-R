@@ -25,7 +25,7 @@ impl ClientHandler {
         let port = args.port.clone().unwrap();
         let address = args.address.clone().unwrap();
         let mut device_manager = DeviceManager::new_input(device_id);
-        if args.device_select {
+        if args.select_device {
             device_manager.change_device();
         }
 

@@ -37,7 +37,7 @@ pub struct SmartHandler {
     pub device_id: Option<String>,
 
     #[arg(long, action = clap::ArgAction::SetTrue)]
-    pub device_select: bool,
+    pub select_device: bool,
 }
 
 pub fn parse_args() -> ParsedArgs {
