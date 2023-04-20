@@ -1,6 +1,6 @@
 use std::net::{SocketAddr, UdpSocket};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use cpal::traits::DeviceTrait;
 use cpal::{Data, Device, SampleFormat, Stream, StreamConfig};
 use log::{debug, error, info};
@@ -27,16 +27,16 @@ impl ClientHandler {
 
         let handler = ClientHandler { address, device };
 
-        info!("client configs:");
-        info!("\t address: {:?}", &handler.address);
-        info!("\t deviceName: {:?}", &handler.device.name()?);
+        info!("Client Configs:");
+        info!("\tAddress: {:?}", &handler.address);
+        info!("\tDevice Name: {:?}", &handler.device.name()?);
 
         Ok(handler)
     }
 
     pub fn create_stream(&self) -> Result<Stream> {
+        let socket = UdpSocket::bind("127.0.0.1:0").with_context(|| "Failed to bind socket")?;
         let config = self.device.default_input_config()?;
-        let socket = UdpSocket::bind("127.0.0.1:0")?;
         let channels = match config.channels() {
             1 => Mono,
             2 => Stereo,
@@ -46,37 +46,40 @@ impl ClientHandler {
             Encoder::new(config.sample_rate().0, channels, opus::Application::Audio).unwrap();
 
         let address = self.address;
-        let stream = self.device.build_input_stream_raw(
-            &StreamConfig {
-                channels: config.channels(),
-                sample_rate: config.sample_rate(),
-                buffer_size: cpal::BufferSize::Default,
-            },
-            config.sample_format(),
-            move |data: &Data, _: &cpal::InputCallbackInfo| {
-                let mut buf = vec![0_u8; data.len() * 4];
-                let size = match data.sample_format() {
-                    SampleFormat::F32 => encoder
-                        .encode_float(data.as_slice().unwrap(), &mut buf)
-                        .unwrap(),
-                    SampleFormat::I16 => {
-                        encoder.encode(data.as_slice().unwrap(), &mut buf).unwrap()
+        let stream = self
+            .device
+            .build_input_stream_raw(
+                &StreamConfig {
+                    channels: config.channels(),
+                    sample_rate: config.sample_rate(),
+                    buffer_size: cpal::BufferSize::Default,
+                },
+                config.sample_format(),
+                move |data: &Data, _: &cpal::InputCallbackInfo| {
+                    let mut buf = vec![0_u8; data.len() * 4];
+                    let size = match data.sample_format() {
+                        SampleFormat::F32 => encoder
+                            .encode_float(data.as_slice().unwrap(), &mut buf)
+                            .unwrap(),
+                        SampleFormat::I16 => {
+                            encoder.encode(data.as_slice().unwrap(), &mut buf).unwrap()
+                        }
+                        _ => panic!("Unsupported sample format."),
+                    };
+                    match socket.send_to(&buf[..size], address) {
+                        Ok(size) => debug!(
+                            "got {:?} and sent {:?} bytes to {:?}",
+                            data.bytes().len(),
+                            size,
+                            &address
+                        ),
+                        Err(e) => error!("Something went wrong when sending data: {}", e),
                     }
-                    _ => panic!("Unsupported sample format"),
-                };
-                match socket.send_to(&buf[..size], address) {
-                    Ok(size) => debug!(
-                        "got {:?} and sent {:?} bytes to {:?}",
-                        data.bytes().len(),
-                        size,
-                        &address
-                    ),
-                    Err(e) => error!("something went wrong when sending data: {}", e),
-                }
-            },
-            |err| error!("something went wrong: {}", err),
-            None,
-        )?;
+                },
+                |e| error!("Something went wrong with audio stream: {}", e),
+                None,
+            )
+            .with_context(|| "Failed to created audio system.")?;
 
         Ok(stream)
     }
