@@ -1,19 +1,17 @@
-use crate::device_selector::{select_device, select_device_by_id, DeviceType};
-
-use cpal::traits::DeviceTrait;
-use cpal::{Data, Device, SampleFormat, Stream, StreamConfig};
-
 use std::net::{SocketAddr, UdpSocket};
 
-use crate::cli::HandlerArgs;
 use anyhow::{Context, Result};
+use cpal::traits::DeviceTrait;
+use cpal::{Data, Device, SampleFormat, Stream, StreamConfig};
 use log::{debug, error, info};
 use opus::{Channels, Decoder};
+
+use crate::cli::HandlerArgs;
+use crate::device_selector::{select_device, select_device_by_id, DeviceType};
 
 pub struct ServerHandler {
     address: SocketAddr,
     device: Device,
-    socket: UdpSocket,
 }
 
 impl ServerHandler {
@@ -26,23 +24,18 @@ impl ServerHandler {
             select_device_by_id(args.device_id, DeviceType::Output)
         }?;
 
-        let socket = UdpSocket::bind(address).with_context(|| "Failed to bind socket.")?;
-        let handler = ServerHandler {
-            address,
-            device,
-            socket,
-        };
+        let handler = ServerHandler { address, device };
 
-        info!("server configs:");
-        info!("\t address: {:?}", &handler.address);
-        info!("\t deviceName: {:?}", &handler.device.name()?);
+        info!("Server Configs:");
+        info!("\tAddress: {:?}", &handler.address);
+        info!("\tDevice Name: {:?}", &handler.device.name()?);
 
         Ok(handler)
     }
 
     pub fn create_stream(&self) -> Result<Stream> {
+        let socket = UdpSocket::bind(self.address).with_context(|| "Failed to bind socket")?;
         let config = self.device.default_output_config()?;
-        let socket = self.socket.try_clone()?;
         let channels = match config.channels() {
             1 => Channels::Mono,
             2 => Channels::Stereo,
@@ -84,16 +77,16 @@ impl ServerHandler {
                             debug!("got {} bytes from {}", size, addr,)
                         }
                         Err(e) => {
-                            error!("recv function failed: {}", e);
+                            error!("Something went wrong when receiving data: {}", e);
                         }
                     }
                 },
-                |err| {
-                    error!("an error occurred on stream: {}", err);
+                |e| {
+                    error!("Something went wrong with audio stream: {}", e);
                 },
                 None,
             )
-            .with_context(|| "Failed to create audio stream.")?;
+            .with_context(|| "Failed to create audio stream")?;
         Ok(stream)
     }
 }

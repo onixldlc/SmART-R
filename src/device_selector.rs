@@ -12,10 +12,12 @@ pub fn select_device() -> Result<Device> {
     let host = cpal::default_host();
     let mut devices: Vec<_> = host.devices()?.collect();
 
+    println!("Select a device:");
     for (i, device) in devices.iter().enumerate() {
         println!("{}: {}", i, device.name()?);
     }
 
+    print!("Device: ");
     // read an integer from console
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
