@@ -1,4 +1,4 @@
-use std::net::{SocketAddr, UdpSocket};
+use std::net::{Ipv4Addr, SocketAddr, UdpSocket};
 
 use anyhow::{Context, Result};
 use cpal::traits::DeviceTrait;
@@ -16,7 +16,8 @@ pub struct ServerHandler {
 
 impl ServerHandler {
     pub fn new(args: HandlerArgs) -> Result<Self> {
-        let address = SocketAddr::from((args.address, args.port));
+        let address = args.address.unwrap_or(Ipv4Addr::UNSPECIFIED.into());
+        let address = SocketAddr::from((address, args.port));
 
         let device = if args.select_device {
             select_device()
