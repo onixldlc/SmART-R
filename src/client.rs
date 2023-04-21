@@ -1,4 +1,5 @@
 use std::net::{SocketAddr, UdpSocket};
+use std::net::{IpAddr};
 
 use anyhow::{Context, Result};
 use cpal::traits::DeviceTrait;
@@ -17,7 +18,8 @@ pub struct ClientHandler {
 
 impl ClientHandler {
     pub fn new(args: HandlerArgs) -> Result<Self> {
-        let address = SocketAddr::from((args.address, args.port));
+        let addr = args.address.unwrap_or("127.0.0.1".parse::<IpAddr>().unwrap());
+        let address = SocketAddr::from((addr, args.port));
 
         let device = if args.select_device {
             select_device()
