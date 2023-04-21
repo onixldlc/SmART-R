@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::Device;
 use std::io;
+use std::io::Write;
 
 pub enum DeviceType {
     Input,
@@ -18,6 +19,7 @@ pub fn select_device() -> Result<Device> {
     }
 
     print!("Device: ");
+    io::stdout().flush()?;
     // read an integer from console
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
