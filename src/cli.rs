@@ -20,7 +20,7 @@ pub enum Commands {
 
 #[derive(Args, Debug)]
 pub struct HandlerArgs {
-    pub address: IpAddr,
+    pub address: Option<IpAddr>,
 
     /// Optional port incase the user wants to change it
     #[arg(short, long, default_value = "34567")]
